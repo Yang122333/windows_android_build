@@ -1,5 +1,5 @@
 # ===== Android AAB Build Script (Unity Project) =====
-# Version: 15
+# Version: 16
 # Usage: powershell -ExecutionPolicy Bypass -File .\build-aab.ps1
 # Put this script in the same folder as your project .zip file
 
@@ -509,9 +509,24 @@ $signingBlock = @"
 
 # Insert signingConfigs inside android { } block, right after the opening
 if ($gradleContent -notmatch 'signingConfigs\s*\{[^}]*release') {
-    # Match exactly "android {" at line start, not "androidJunkCode {" etc.
-    $gradleContent = $gradleContent -replace '(?m)(^android\b\s*\{)', "`$1`n$signingBlock"
-    Write-Ok "signingConfigs block added"
+    # Find the exact "android {" line (not androidJunkCode, androidExtensions, etc.)
+    $lines = $gradleContent -split "`n"
+    $insertIdx = -1
+    for ($i = 0; $i -lt $lines.Count; $i++) {
+        $trimmed = $lines[$i].Trim()
+        if ($trimmed -eq 'android {' -or $trimmed -eq 'android{') {
+            $insertIdx = $i
+            break
+        }
+    }
+    if ($insertIdx -ge 0) {
+        $before = $lines[0..$insertIdx] -join "`n"
+        $after = $lines[($insertIdx+1)..($lines.Count-1)] -join "`n"
+        $gradleContent = $before + "`n" + $signingBlock + "`n" + $after
+        Write-Ok "signingConfigs block added after line $($insertIdx+1)"
+    } else {
+        Write-Err "Could not find 'android {' line in build.gradle"
+    }
 } else {
     Write-Skip "signingConfigs already exists"
 }
