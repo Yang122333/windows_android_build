@@ -1,4 +1,5 @@
 # ===== Android AAB Build Script (Unity Project) =====
+# Version: 15
 # Usage: powershell -ExecutionPolicy Bypass -File .\build-aab.ps1
 # Put this script in the same folder as your project .zip file
 
@@ -58,15 +59,20 @@ if ($zipFiles.Count -eq 0) {
 
 $PROJECT_DIR = "$WORKSPACE\project"
 if (Test-Path $PROJECT_DIR) { 
+    Write-Host "    Cleaning old project dir..." -ForegroundColor Gray
     cmd /c "rmdir /s /q `"$PROJECT_DIR`"" 2>$null
+    Start-Sleep -Seconds 1
+    if (Test-Path $PROJECT_DIR) {
+        Remove-Item -Recurse -Force $PROJECT_DIR -ErrorAction SilentlyContinue
+    }
 }
 New-Item -ItemType Directory -Force -Path $PROJECT_DIR | Out-Null
 
 Write-Step "Extracting project..."
-# Use -Force and pipe to Out-Null to suppress any prompts
 $ProgressPreference = 'SilentlyContinue'
 Expand-Archive -Path $zipFile -DestinationPath $PROJECT_DIR -Force *>&1 | Out-Null
 $ProgressPreference = 'Continue'
+Write-Ok "Extracted"
 
 # Navigate into the single subfolder if needed
 $subDirs = Get-ChildItem -Path $PROJECT_DIR -Directory | Where-Object { $_.Name -ne "__MACOSX" }
